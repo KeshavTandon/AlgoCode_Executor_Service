@@ -24,8 +24,11 @@
     "typescript": "^5.4.5"
   },
   "dependencies": {
+    "@types/ioredis": "^5.0.0",
+    "bullmq": "^5.7.6",
     "concurrently": "^8.2.2",
     "dotenv": "^16.4.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "ioredis": "^5.4.1"
   }
 }
