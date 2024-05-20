@@ -1,3 +1,6 @@
 import { Queue } from "bullmq";
 
-export default new Queue('Sample Queue');
+import redisConnection from "../config/redisConfig";
+console.log(redisConnection);
+
+export default new Queue('Sample Queue',{connection:redisConnection});
