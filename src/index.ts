@@ -1,3 +1,4 @@
+import bodyParser from "body-parser";
 import express from "express";
 
 import bullBoardAdapter from "./config/bullBoardConfig";
@@ -8,7 +9,9 @@ import SampleWorker from "./workers/sampleWorker";
 
 
 const app = express();
-
+app.use(bodyParser.urlencoded());
+app.use(bodyParser.json());
+app.use(bodyParser.text());
 
 app.use('/api',apiRouter); //attaching the middleware to the '/api'
 app.use('/dashboard', bullBoardAdapter.getRouter());
