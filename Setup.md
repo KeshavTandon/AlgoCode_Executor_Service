@@ -35,3 +35,8 @@ Note:Make relevant config changes in ts.config.json
 npm run dev
 ```
 
+For redis server start->
+```
+sudo service redis-server start
+```
+
