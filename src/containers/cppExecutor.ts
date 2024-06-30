@@ -1,12 +1,12 @@
+import CodeExecutorStrategy, { ExecutionResponse } from "../types/CodeExecutorStrategy";
 import { CPP_IMAGE } from "../utils/constants";
 import createContainer from "./containerFactory";
-import decodeDockerStream from "./dockerHelper";
+import { fetchDecodedStream } from "./dockerHelper";
+import pullImage from "./pullImage";
 
-async function runCpp(code:string, inputTestCase: string)
-{
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const rawLogBuffer:Buffer[]=[];
+class CppExecutor implements CodeExecutorStrategy{
+    async execute(code: string, inputTestCase: string): Promise<ExecutionResponse> {
+         const rawLogBuffer:Buffer[]=[];
      const runCommand = `echo '${code.replace(/'/g, `'\\"`)}' > main.cpp && g++ main.cpp -o main && echo '${inputTestCase.replace(/'/g, `'\\"`)}' | ./main`;
      
     const cppDockerContainer = await createContainer(CPP_IMAGE, [
@@ -18,6 +18,7 @@ async function runCpp(code:string, inputTestCase: string)
     await cppDockerContainer.start();
 
     console.log("started the docker container");
+    await pullImage(CPP_IMAGE);
 
     const loggerStream=await cppDockerContainer.logs({
         stdout:true,
@@ -30,19 +31,17 @@ async function runCpp(code:string, inputTestCase: string)
         rawLogBuffer.push(chunk);
     });
 
-    const response=await new Promise((res)=>{
-        loggerStream.on('end',()=>{
-        console.log(rawLogBuffer);
-        const completeBuffer = Buffer.concat(rawLogBuffer);
-        const decodedStream = decodeDockerStream(completeBuffer);
-        console.log(decodedStream);
-        console.log(decodedStream.stdout);    
-        res(decodedStream);
-        });
-    });
-    await cppDockerContainer.remove();
-    return response;
- 
+    try {
+        const codeResponse :string = await fetchDecodedStream(loggerStream,rawLogBuffer);
+        return {output:codeResponse,status:"COMPLETED"};
+    } catch (error) {
+        return {output:error as string ,status:"ERROR"};
+    } finally{
+        await cppDockerContainer.remove();
+    }
+    
+    }
 }
 
-export default runCpp;
+
+export default CppExecutor;

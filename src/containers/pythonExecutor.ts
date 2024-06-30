@@ -1,15 +1,16 @@
+import CodeExecutorStrategy, { ExecutionResponse } from "../types/CodeExecutorStrategy";
 import { PYTHON_IMAGE } from "../utils/constants";
 import createContainer from "./containerFactory";
-import decodeDockerStream from "./dockerHelper";
+import { fetchDecodedStream } from "./dockerHelper";
+import pullImage from "./pullImage";
 
-async function runPython(code:string, inputTestCase: string)
-{
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+class PythonExecutor implements CodeExecutorStrategy{
+    async execute(code: string, inputTestCase: string): Promise<ExecutionResponse> {
+        
     const rawLogBuffer:Buffer[]=[];
     const runCommand = `echo '${code.replace(/'/g, `'\\"`)}' > test.py && echo '${inputTestCase.replace(/'/g, `'\\"`)}' | python3 test.py`;
     console.log(runCommand);
-    // const pythonDockerContainer = await createContainer(PYTHON_IMAGE, ['python3', '-c', code, 'stty -echo']); 
+    
     const pythonDockerContainer = await createContainer(PYTHON_IMAGE, [
         '/bin/sh', 
         '-c',
@@ -17,8 +18,9 @@ async function runPython(code:string, inputTestCase: string)
     ]); 
 
     await pythonDockerContainer.start();
-
+ 
     console.log("started the docker container");
+    await pullImage(PYTHON_IMAGE);
 
     const loggerStream=await pythonDockerContainer.logs({
         stdout:true,
@@ -31,18 +33,17 @@ async function runPython(code:string, inputTestCase: string)
         rawLogBuffer.push(chunk);
     });
 
-    await new Promise((res)=>{
-        loggerStream.on('end',()=>{
-        console.log(rawLogBuffer);
-        const completeBuffer = Buffer.concat(rawLogBuffer);
-        const decodedStream = decodeDockerStream(completeBuffer);
-        console.log(decodedStream);
-        console.log(decodedStream.stdout);    
-        res(decodeDockerStream);
-        });
-    });
-    await pythonDockerContainer.remove();
- 
+    try {
+        const codeResponse :string = await fetchDecodedStream(loggerStream,rawLogBuffer);
+        return {output:codeResponse,status:"COMPLETED"};
+    } catch (error) {
+        return {output:error as string ,status:"ERROR"};
+    } finally{
+        await pythonDockerContainer.remove();
+    }
+
+    
+    }
 }
 
-export default runPython;
+export default PythonExecutor;

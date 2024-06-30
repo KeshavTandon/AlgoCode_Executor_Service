@@ -1,11 +1,13 @@
+import CodeExecutorStrategy, { ExecutionResponse } from "../types/CodeExecutorStrategy";
 import { JAVA_IMAGE } from "../utils/constants";
 import createContainer from "./containerFactory";
-import decodeDockerStream from "./dockerHelper";
+import { fetchDecodedStream } from "./dockerHelper";
+import pullImage from "./pullImage";
 
-async function runJava(code:string, inputTestCase: string)
-{
+class JavaExecutor implements CodeExecutorStrategy {
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async execute(code: string, inputTestCase: string): Promise<ExecutionResponse> {
+
     const rawLogBuffer:Buffer[]=[];
     const runCommand = `echo '${code.replace(/'/g, `'\\"`)}' > Main.java && javac Main.java && echo '${inputTestCase.replace(/'/g, `'\\"`)}' | java Main`;
     console.log(runCommand);
@@ -19,6 +21,7 @@ async function runJava(code:string, inputTestCase: string)
     await javaDockerContainer.start();
 
     console.log("started the docker container");
+    await pullImage(JAVA_IMAGE);
 
     const loggerStream=await javaDockerContainer.logs({
         stdout:true,
@@ -31,18 +34,16 @@ async function runJava(code:string, inputTestCase: string)
         rawLogBuffer.push(chunk);
     });
 
-    await new Promise((res)=>{
-        loggerStream.on('end',()=>{
-        console.log(rawLogBuffer);
-        const completeBuffer = Buffer.concat(rawLogBuffer);
-        const decodedStream = decodeDockerStream(completeBuffer);
-        console.log(decodedStream);
-        console.log(decodedStream.stdout);    
-        res(decodeDockerStream);
-        });
-    });
-    await javaDockerContainer.remove();
- 
+    try {
+        const codeResponse :string = await fetchDecodedStream(loggerStream,rawLogBuffer);
+        return {output:codeResponse,status:"COMPLETED"};
+    } catch (error) {
+        return {output:error as string ,status:"ERROR"};
+    } finally{
+        await javaDockerContainer.remove();
+    }
+
+    }
 }
 
-export default runJava;
+export default JavaExecutor;
