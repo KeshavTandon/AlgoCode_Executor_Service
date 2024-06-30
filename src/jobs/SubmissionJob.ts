@@ -1,10 +1,9 @@
 import { Job } from "bullmq";
-import runCpp from "../containers/runCppDocker";
+
 import { IJob } from "../types/bullMqJobDefinition";
-import { SubmissionPayload } from "../types/submissionPayload";
-import CppExecutor from "../containers/runCppDocker";
-import createExecutor from "../utils/ExecutorFactory";
 import { ExecutionResponse } from "../types/CodeExecutorStrategy";
+import { SubmissionPayload } from "../types/submissionPayload";
+import createExecutor from "../utils/ExecutorFactory";
 
 export default class SubmissionJob implements IJob{
     name:string;
