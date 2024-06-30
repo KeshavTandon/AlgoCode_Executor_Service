@@ -3,7 +3,7 @@ import express from "express";
 
 import bullBoardAdapter from "./config/bullBoardConfig";
 import serverConfig from "./config/serverConfig";
-import runPython from "./containers/runPythonDocker";
+import runCpp from "./containers/runCppDocker";
 // import sampleQueueProducer from "./producers/sampleQueueProducer";
 import apiRouter from "./routes";
 import SampleWorker from "./workers/sampleWorker";
@@ -29,15 +29,22 @@ app.listen(serverConfig.PORT, () => {
   //   interests:"ProblemSolving"
   // });
 
-  const code = `x = input()
-y = input()
-print("value of x is", x)
-print("value of y is", y)
+  const code = `
+  #include<bits/stdc++.h>
+  using namespace std;
+  int main()
+  {
+    int x;
+    cin>>x;
+    for(int i=0;i<x;i++)
+      {
+        cout << i << " ";
+      }
+      cout << endl;
+  }
 `;
 
-const inputCase = `100
-200
-`;
+const inputCase = `10`;
 
-  runPython(code, inputCase);
+  runCpp(code, inputCase);
 });
